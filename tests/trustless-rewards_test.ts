@@ -2,7 +2,7 @@ import { Clarinet, Tx, Chain, Account, types } from 'https://deno.land/x/clarine
 import { assertEquals } from 'https://deno.land/std@0.90.0/testing/asserts.ts';
 
 Clarinet.test({
-  name: 'Ensure that owner can create a lobby',
+  name: 'Ensure that user can create a lobby',
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
     const wallet_1 = accounts.get('wallet_1')!;
@@ -23,7 +23,7 @@ Clarinet.test({
           types.ascii(`straight`), // curves
           types.uint(24), // hours
         ],
-        deployer.address
+        wallet_1.address
       ),
     ]);
     // console.log(`block `, block);
@@ -39,13 +39,13 @@ Clarinet.test({
     );
     assertEquals(
       tx.result,
-      '(ok {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM, price: u5, traffic: "intense"})'
+      '(ok {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, price: u5, traffic: "intense"})'
     );
   },
 });
 
 Clarinet.test({
-  name: 'Ensure that owner can create a lobby and disable it, users can not join after disabled',
+  name: 'Ensure that user can create a lobby and owner can disable it, users can not join after disabled',
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
     const wallet_1 = accounts.get('wallet_1')!;
@@ -66,7 +66,7 @@ Clarinet.test({
           types.ascii(`straight`), // curves
           types.uint(24), // hours
         ],
-        deployer.address
+        wallet_1.address
       ),
     ]);
     // console.log(`block `, block);
@@ -82,7 +82,7 @@ Clarinet.test({
     );
     assertEquals(
       tx.result,
-      '(ok {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM, price: u5, traffic: "intense"})'
+      '(ok {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, price: u5, traffic: "intense"})'
     );
 
     let block2 = chain.mineBlock([
