@@ -15,7 +15,7 @@
 (define-constant DEFAULT-PRICE u100)
 
 ;; data maps and vars
-(define-map lobbies {id: uint} {owner: principal, description: (string-ascii 99), balance: uint, price: uint, factor: uint, commission: uint, mapy: (string-ascii 30), length: (string-ascii 10), traffic: (string-ascii 10), curves: (string-ascii 10), hours: uint, active: bool})
+(define-map lobbies uint {owner: principal, description: (string-ascii 99), balance: uint, price: uint, factor: uint, commission: uint, mapy: (string-ascii 30), length: (string-ascii 10), traffic: (string-ascii 10), curves: (string-ascii 10), hours: uint, active: bool})
 (define-map scoreboard {lobby-id: uint, address: principal} {score: uint, rank: uint, sum-rank-factor: uint, rank-factor: uint, rewards: uint, rac: uint, nft: (string-ascii 99)})
 (define-data-var lobby-count uint u0)
 (define-data-var contract-owner principal tx-sender)
@@ -29,14 +29,10 @@
 )
 
 (define-private (add-balance (id uint) (participant principal) (amount uint))
-  (begin
-    (unwrap-panic (stx-transfer? amount participant (as-contract tx-sender)))
-    (match
-      (map-get? lobbies {id: id})
-      lobby
-      (map-set lobbies {id: id} (merge lobby {balance: (+ (default-to u0 (get balance (map-get? lobbies {id: id}))) amount)}))
-      false
-    )
+  (let ((lobby (unwrap! (map-get? lobbies id) (ok false))))
+    (try! (stx-transfer? amount participant (as-contract tx-sender)))
+    (map-set lobbies id (merge lobby {balance: (+ (get balance lobby) amount)}))
+    (ok true)
   )
 )
 
@@ -52,7 +48,7 @@
         (lobby-id (increment-lobby-count))
         )
         ;; (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-        (map-set lobbies {id: lobby-id} 
+        (map-set lobbies lobby-id 
           {
             owner: tx-sender, description: description, balance: u0, price: price, factor: factor, commission: commission, 
             mapy: mapy, length: length, traffic: traffic, curves: curves, hours: hours, active: true
@@ -64,40 +60,35 @@
 )
 
 (define-read-only (get-lobby (id uint))
-    (ok (unwrap-panic (map-get? lobbies {id: id})))
+    (map-get? lobbies id)
 )
 
 
 ;; anyone can call to join lobbies
 (define-public (join (id uint))
     (let (
-        (entry-price (default-to DEFAULT-PRICE (get price (map-get? lobbies {id: id}))))
+        (lobby (unwrap! (map-get? lobbies id) ERR-NOT-FOUND))
+        (entry-price (get price lobby))
         (joined (map-insert scoreboard {lobby-id: id, address: tx-sender} {score: u0, rank: u0, sum-rank-factor: u0, rank-factor: u0, rewards: u0, rac: u0, nft: ""}))
         )
-        (unwrap-panic (map-get? lobbies {id: id}))
-        (asserts! (default-to false (get active (map-get? lobbies {id: id}))) ERR-NOT-ACTIVE)
+        (asserts! (get active lobby) ERR-NOT-ACTIVE)
         (asserts! joined ERR-ALREADY-JOINED)
-        (add-balance id tx-sender entry-price)
+        (try! (add-balance id tx-sender entry-price))
         (print {action: "join", lobby-id: id, address: tx-sender })
         (ok OK-SUCCESS)
     )
 )
 
 (define-public (disable-lobby (id uint))
-    (begin
+    (let ((lobby (unwrap! (map-get? lobbies id) ERR-NOT-FOUND)))
         (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-        (match
-        (map-get? lobbies {id: id})
-        lobby
-        (map-set lobbies {id: id} (merge lobby {active: false}))
-        false
-        )
+        (map-set lobbies id (merge lobby {active: false}))
         (ok true)
     )
 )
 
 (define-read-only (get-score (lobby-id uint) (address principal))
-    (ok (unwrap-panic (map-get? scoreboard {lobby-id: lobby-id, address: address})))
+    (map-get? scoreboard {lobby-id: lobby-id, address: address})
 )
 
 ;; PUBLISH-MANY
@@ -108,21 +99,13 @@
   )
 )
 (define-private (publish-result (run-result { lobby-id: uint, address: principal, score: uint, rank: uint, sum-rank-factor: uint, rank-factor: uint, rewards: uint, rac: uint, nft: (string-ascii 99)}))
-  (publish-only (get lobby-id run-result) (get address run-result) (get score run-result) (get rank run-result) (get sum-rank-factor run-result) (get rank-factor run-result) (get rewards run-result) (get rac run-result) (get nft run-result))
-)
-(define-private (publish-only (lobby-id uint) (address principal) (score uint) (rank uint) (sum-rank-factor uint) (rank-factor uint) (rewards uint) (rac uint) (nft (string-ascii 99)))
-  (let
-    (
-      (publishOk (try! (publish lobby-id address score rank sum-rank-factor rank-factor rewards rac nft)))
-    )
-    (ok publishOk)
-  )
+  (publish (get lobby-id run-result) (get address run-result) (get score run-result) (get rank run-result) (get sum-rank-factor run-result) (get rank-factor run-result) (get rewards run-result) (get rac run-result) (get nft run-result))
 )
 (define-private (publish (lobby-id uint) (address principal) (score uint) (rank uint) (sum-rank-factor uint) (rank-factor uint) (rewards uint) (rac uint) (nft (string-ascii 99)))
     (begin
         (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-        (unwrap-panic (map-get? scoreboard {lobby-id: lobby-id, address: address}))
-        (asserts! (default-to false (get active (map-get? lobbies {id: lobby-id}))) ERR-NOT-ACTIVE)
+        (asserts! (is-some (map-get? scoreboard {lobby-id: lobby-id, address: address})) ERR-NOT-FOUND)
+        (asserts! (default-to false (get active (map-get? lobbies lobby-id))) ERR-NOT-ACTIVE)
         (map-set scoreboard {lobby-id: lobby-id, address: address} {score: score, rank: rank, sum-rank-factor: sum-rank-factor, rank-factor: rank-factor, rewards: rewards, rac: rac, nft: nft})
         (print {action: "publish", lobby-id: lobby-id, address: address, score: score, rank: rank, sum-rank-factor: sum-rank-factor, rank-factor: rank-factor, rewards: rewards, rac: rac, nft: nft})
         (ok true)
@@ -137,23 +120,12 @@
   )
 )
 (define-private (finish-result (run-result { lobby-id: uint, address: principal, score: uint, rank: uint, sum-rank-factor: uint, rank-factor: uint, rewards: uint, rac: uint, nft: (string-ascii 99)}))
-    (finish-only (get lobby-id run-result) (get address run-result) (get score run-result) (get rank run-result) (get sum-rank-factor run-result) (get rank-factor run-result) (get rewards run-result) (get rac run-result) (get nft run-result))
-)
-(define-private (finish-only (lobby-id uint) (address principal) (score uint) (rank uint) (sum-rank-factor uint) (rank-factor uint) (rewards uint) (rac uint) (nft (string-ascii 99)))
-  (let
-    (
-      (finishOk (try! (finish lobby-id address score rank sum-rank-factor rank-factor rewards rac nft)))
-    )
-    (ok finishOk)
-  )
+    (finish (get lobby-id run-result) (get address run-result) (get score run-result) (get rank run-result) (get sum-rank-factor run-result) (get rank-factor run-result) (get rewards run-result) (get rac run-result) (get nft run-result))
 )
 ;; distribute rewards for all runs in a lobby
 (define-private (finish (lobby-id uint) (address principal) (score uint) (rank uint) (sum-rank-factor uint) (rank-factor uint) (rewards uint) (rac uint) (nft (string-ascii 99)))
     (begin
-        (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-AUTHORIZED)
-        (unwrap-panic (map-get? scoreboard {lobby-id: lobby-id, address: address}))
-        (asserts! (default-to false (get active (map-get? lobbies {id: lobby-id}))) ERR-NOT-ACTIVE)
-        (map-set scoreboard {lobby-id: lobby-id, address: address} {score: score, rank: rank, sum-rank-factor: sum-rank-factor, rank-factor: rank-factor, rewards: rewards, rac: rac, nft: nft})
+        (try! (publish lobby-id address score rank sum-rank-factor rank-factor rewards rac nft))
         (try! (as-contract (stx-transfer? rac tx-sender address)))
         (print {action: "finish", lobby-id: lobby-id, address: address, score: score, rank: rank, sum-rank-factor: sum-rank-factor, rank-factor: rank-factor, rewards: rewards, rac: rac, nft: nft})
         (ok true)
