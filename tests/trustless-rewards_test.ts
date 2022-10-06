@@ -39,7 +39,7 @@ Clarinet.test({
     );
     assertEquals(
       tx.result,
-      '(ok {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, price: u5, traffic: "intense"})'
+      '(some {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, price: u5, traffic: "intense"})'
     );
   },
 });
@@ -82,7 +82,7 @@ Clarinet.test({
     );
     assertEquals(
       tx.result,
-      '(ok {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, price: u5, traffic: "intense"})'
+      '(some {active: true, balance: u5, commission: u5, curves: "straight", description: "lobby description", factor: u5, hours: u24, length: "long", mapy: "miamiBeach", owner: ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5, price: u5, traffic: "intense"})'
     );
 
     let block2 = chain.mineBlock([
@@ -146,7 +146,7 @@ Clarinet.test({
     // console.log(`tx `, tx);
     assertEquals(
       tx.result,
-      '(ok {nft: "", rac: u0, rank: u0, rank-factor: u0, rewards: u0, score: u0, sum-rank-factor: u0})'
+      '(some {nft: "", rac: u0, rank: u0, rank-factor: u0, rewards: u0, score: u0, sum-rank-factor: u0})'
     );
   },
 });
@@ -219,7 +219,7 @@ Clarinet.test({
     // console.log(`tx `, tx);
     assertEquals(
       tx.result,
-      '(ok {nft: "", rac: u0, rank: u0, rank-factor: u0, rewards: u0, score: u0, sum-rank-factor: u0})'
+      '(some {nft: "", rac: u0, rank: u0, rank-factor: u0, rewards: u0, score: u0, sum-rank-factor: u0})'
     );
   },
 });
@@ -437,9 +437,9 @@ Clarinet.test({
     let block = chain.mineBlock([Tx.contractCall('trustless-rewards', 'finish-result-many', [args], deployer.address)]);
     // console.log('block ', block.receipts[0].events);
     block.receipts[0].result.expectOk().expectBool(true);
-    assertEquals(block.receipts[0].events[0].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
-    assertEquals(block.receipts[0].events[2].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
+    assertEquals(block.receipts[0].events[1].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
     assertEquals(block.receipts[0].events[4].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
+    assertEquals(block.receipts[0].events[7].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
   },
 });
 
@@ -489,8 +489,8 @@ Clarinet.test({
       Tx.contractCall('trustless-rewards', 'publish-result-many', [args], deployer.address),
     ]);
     // console.log('block ', block);
-    assertEquals(block.receipts.length, 0);
-    // block.receipts[0].result.expectOk().expectUint(1);
+    assertEquals(block.receipts.length, 1);
+    block.receipts[0].result.expectErr().expectUint(404);
   },
 });
 
