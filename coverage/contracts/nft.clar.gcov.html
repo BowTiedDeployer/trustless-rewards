@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Date:</td>
-            <td class="headerValue">Sun Aug 28 15:34:51 2022</td>
+            <td class="headerValue">Tue Oct 18 01:23:37 2022</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntry">3</td>
@@ -77,7 +77,7 @@
 <a name="15"><span class="lineNum">      15 </span>            : (define-data-var ipfs-root (string-ascii 102) &quot;ipfs://ipfs/QmNXPcF8PbPve19PwyTiDizrxvjuq7ZzQ6ZVSsv3AYguXg/bolt/&quot;)</a>
 <a name="16"><span class="lineNum">      16 </span>            : </a>
 <a name="17"><span class="lineNum">      17 </span>            : ;; premint to tx-sender</a>
-<a name="18"><span class="lineNum">      18 </span><span class="lineCov">         19 : (claim)</span></a>
+<a name="18"><span class="lineNum">      18 </span><span class="lineCov">         22 : (claim)</span></a>
 <a name="19"><span class="lineNum">      19 </span>            : </a>
 <a name="20"><span class="lineNum">      20 </span>            : ;; Claim for an address</a>
 <a name="21"><span class="lineNum">      21 </span>            : (define-public (claim-for (address principal))</a>
@@ -85,7 +85,7 @@
 <a name="23"><span class="lineNum">      23 </span>            : </a>
 <a name="24"><span class="lineNum">      24 </span>            : ;; Claim a new NFT</a>
 <a name="25"><span class="lineNum">      25 </span>            : (define-public (claim)</a>
-<a name="26"><span class="lineNum">      26 </span><span class="lineCov">         38 :   (mint tx-sender))</span></a>
+<a name="26"><span class="lineNum">      26 </span><span class="lineCov">         44 :   (mint tx-sender))</span></a>
 <a name="27"><span class="lineNum">      27 </span>            : </a>
 <a name="28"><span class="lineNum">      28 </span>            : ;; SIP009: Transfer token to a specified principal</a>
 <a name="29"><span class="lineNum">      29 </span>            : (define-public (transfer (token-id uint) (sender principal) (recipient principal))</a>
@@ -111,16 +111,16 @@
 <a name="49"><span class="lineNum">      49 </span>            : </a>
 <a name="50"><span class="lineNum">      50 </span>            : ;; Internal - Mint new NFT</a>
 <a name="51"><span class="lineNum">      51 </span>            : (define-private (mint (new-owner principal))</a>
-<a name="52"><span class="lineNum">      52 </span><span class="lineCov">         19 :   (let (</span></a>
-<a name="53"><span class="lineNum">      53 </span><span class="lineCov">         57 :         (next-id (+ u1 (var-get last-id)))  </span></a>
-<a name="54"><span class="lineNum">      54 </span><span class="lineCov">         19 :         (count (var-get last-id))</span></a>
+<a name="52"><span class="lineNum">      52 </span><span class="lineCov">         22 :   (let (</span></a>
+<a name="53"><span class="lineNum">      53 </span><span class="lineCov">         66 :         (next-id (+ u1 (var-get last-id)))  </span></a>
+<a name="54"><span class="lineNum">      54 </span><span class="lineCov">         22 :         (count (var-get last-id))</span></a>
 <a name="55"><span class="lineNum">      55 </span>            :       )</a>
-<a name="56"><span class="lineNum">      56 </span><span class="lineCov">         76 :       (asserts! (&lt; count MINT-LIMIT) (err ERR-ALL-MINTED))</span></a>
-<a name="57"><span class="lineNum">      57 </span><span class="lineCov">        114 :         (match (stx-transfer? (var-get cost-per-mint) tx-sender (as-contract tx-sender))</span></a>
-<a name="58"><span class="lineNum">      58 </span><span class="lineCov">         19 :           success (begin</span></a>
-<a name="59"><span class="lineNum">      59 </span><span class="lineCov">         76 :             (try! (nft-mint? cube next-id new-owner))</span></a>
-<a name="60"><span class="lineNum">      60 </span><span class="lineCov">         38 :             (var-set last-id next-id)</span></a>
-<a name="61"><span class="lineNum">      61 </span><span class="lineCov">         38 :             (ok next-id)</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineCov">         88 :       (asserts! (&lt; count MINT-LIMIT) (err ERR-ALL-MINTED))</span></a>
+<a name="57"><span class="lineNum">      57 </span><span class="lineCov">        132 :         (match (stx-transfer? (var-get cost-per-mint) tx-sender (as-contract tx-sender))</span></a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineCov">         22 :           success (begin</span></a>
+<a name="59"><span class="lineNum">      59 </span><span class="lineCov">         88 :             (try! (nft-mint? cube next-id new-owner))</span></a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineCov">         44 :             (var-set last-id next-id)</span></a>
+<a name="61"><span class="lineNum">      61 </span><span class="lineCov">         44 :             (ok next-id)</span></a>
 <a name="62"><span class="lineNum">      62 </span>            :           ) </a>
 <a name="63"><span class="lineNum">      63 </span><span class="lineNoCov">          0 :           error (err error)</span></a>
 <a name="64"><span class="lineNum">      64 </span>            :           )</a>
