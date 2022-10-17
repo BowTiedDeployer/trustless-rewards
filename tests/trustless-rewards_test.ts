@@ -45,6 +45,28 @@ Clarinet.test({
 });
 
 Clarinet.test({
+  name: 'Ensure that user can not join inexistent lobby ',
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const wallet_1 = accounts.get('wallet_1')!;
+    const wallet_2 = accounts.get('wallet_2')!;
+
+    let block = chain.mineBlock([
+      Tx.contractCall(
+        'trustless-rewards',
+        'join',
+        [
+          types.uint(1), // lobby id
+        ],
+        wallet_1.address
+      ),
+    ]);
+    // console.log(`block2 `, block2.receipts[0].events);
+    block.receipts[0].result.expectErr().expectUint(404);
+  },
+});
+
+Clarinet.test({
   name: 'Ensure that user can create a lobby and owner can disable it, users can not join after disabled',
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
@@ -336,6 +358,98 @@ Clarinet.test({
   },
 });
 
+Clarinet.test({
+  name: 'Ensure that owner cannot publish results for an existing lobby that users have not joined',
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const wallet_1 = accounts.get('wallet_1')!;
+    const wallet_2 = accounts.get('wallet_2')!;
+    const wallet_3 = accounts.get('wallet_3')!;
+    const walletAddressArray = [wallet_1.address, wallet_2.address, wallet_3.address];
+
+    let block1 = chain.mineBlock([
+      Tx.contractCall(
+        'trustless-rewards',
+        'create-lobby',
+        [
+          types.ascii(`lobby description`), // description
+          types.uint(5), // price
+          types.uint(5), // factor
+          types.uint(5), // commission
+          types.ascii(`miamiBeach`), // mapy
+          types.ascii(`long`), // length
+          types.ascii(`intense`), // traffic
+          types.ascii(`straight`), // curves
+          types.uint(24), // hours
+        ],
+        deployer.address
+      ),
+      Tx.contractCall(
+        'trustless-rewards',
+        'join',
+        [
+          types.uint(1), // lobby id
+        ],
+        wallet_1.address
+      ),
+    ]);
+    block1.receipts[0].result.expectOk().expectUint(1);
+
+    let block2 = chain.mineBlock([
+      Tx.contractCall(
+        'trustless-rewards',
+        'join',
+        [
+          types.uint(1), // lobby id
+        ],
+        wallet_1.address
+      ),
+    ]);
+    // console.log(`block2 `, block2.receipts);
+    block2.receipts[0].result.expectErr().expectUint(405);
+
+    // (run-result (list 50 { lobby-id: uint, address: principal, score: uint, rank: uint, sum-rank-factor: uint, rank-factor: uint, rewards: uint, rac: uint, nft: (string-ascii 99)}))
+    const publishManyRecords: any[] = [];
+    let testarray = [...Array(3).keys()].map((x) => x + 1);
+    testarray.forEach((id) => {
+      let record = {
+        'lobby-id': 1,
+        address: walletAddressArray[id - 1],
+        score: 10,
+        rank: id,
+        'sum-rank-factor': 9048625,
+        'rank-factor': 3048625,
+        rewards: 2000000,
+        rac: 1800000,
+        nft: 'Degen#1',
+      };
+      publishManyRecords.push(record);
+    });
+    // console.log('publishManyRecords ', publishManyRecords);
+    const args = types.list(
+      publishManyRecords.map((record) => {
+        return types.tuple({
+          'lobby-id': types.uint(record['lobby-id']),
+          address: types.principal(record.address),
+          score: types.uint(record['score']),
+          rank: types.uint(record['rank']),
+          'sum-rank-factor': types.uint(record['sum-rank-factor']),
+          'rank-factor': types.uint(record['rank-factor']),
+          rewards: types.uint(record['rewards']),
+          rac: types.uint(record['rac']),
+          nft: types.ascii(record['nft']),
+        });
+      })
+    );
+    // console.log('args ', args);
+    let block = chain.mineBlock([
+      Tx.contractCall('trustless-rewards', 'publish-result-many', [args], deployer.address),
+    ]);
+    // console.log('block ', block, block.receipts[0].events);
+    block.receipts[0].result.expectErr().expectUint(404);
+  },
+});
+
 // finish results and distribute rewards
 Clarinet.test({
   name: 'Ensure that owner can finish results and distribute rewards for an existing lobby that users have joined',
@@ -440,6 +554,89 @@ Clarinet.test({
     assertEquals(block.receipts[0].events[1].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
     assertEquals(block.receipts[0].events[4].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
     assertEquals(block.receipts[0].events[7].stx_transfer_event.amount, '4'); // 4 = rac value provided by owner
+  },
+});
+
+// finish results and distribute rewards
+Clarinet.test({
+  name: 'Ensure that owner cannot finish results and distribute rewards for an existing lobby that users have not joined',
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const wallet_1 = accounts.get('wallet_1')!;
+    const wallet_2 = accounts.get('wallet_2')!;
+    const wallet_3 = accounts.get('wallet_3')!;
+    const walletAddressArray = [wallet_1.address, wallet_2.address, wallet_3.address];
+
+    let block1 = chain.mineBlock([
+      Tx.contractCall(
+        'trustless-rewards',
+        'create-lobby',
+        [
+          types.ascii(`lobby description`), // description
+          types.uint(5), // price
+          types.uint(5), // factor
+          types.uint(5), // commission
+          types.ascii(`miamiBeach`), // mapy
+          types.ascii(`long`), // length
+          types.ascii(`intense`), // traffic
+          types.ascii(`straight`), // curves
+          types.uint(24), // hours
+        ],
+        deployer.address
+      ),
+    ]);
+    block1.receipts[0].result.expectOk().expectUint(1);
+
+    let block2 = chain.mineBlock([
+      Tx.contractCall(
+        'trustless-rewards',
+        'join',
+        [
+          types.uint(1), // lobby id
+        ],
+        wallet_1.address
+      ),
+    ]);
+    // console.log(`block2 `, block2.receipts);
+    block2.receipts[0].result.expectOk().expectUint(200);
+    assertEquals(block2.receipts[0].events[0]['stx_transfer_event']['amount'], '5');
+    // (run-result (list 50 { lobby-id: uint, address: principal, score: uint, rank: uint, sum-rank-factor: uint, rank-factor: uint, rewards: uint, rac: uint, nft: (string-ascii 99)}))
+    const publishManyRecords: any[] = [];
+    let testarray = [...Array(3).keys()].map((x) => x + 1);
+    testarray.forEach((id) => {
+      let record = {
+        'lobby-id': 1,
+        address: walletAddressArray[id - 1],
+        score: 10,
+        rank: id,
+        'sum-rank-factor': 9048625,
+        'rank-factor': 15,
+        rewards: 5,
+        rac: 4,
+        nft: 'nft:1',
+      };
+      publishManyRecords.push(record);
+    });
+    // console.log('publishManyRecords ', publishManyRecords);
+    const args = types.list(
+      publishManyRecords.map((record) => {
+        return types.tuple({
+          'lobby-id': types.uint(record['lobby-id']),
+          address: types.principal(record.address),
+          score: types.uint(record['score']),
+          rank: types.uint(record['rank']),
+          'sum-rank-factor': types.uint(record['sum-rank-factor']),
+          'rank-factor': types.uint(record['rank-factor']),
+          rewards: types.uint(record['rewards']),
+          rac: types.uint(record['rac']),
+          nft: types.ascii(record['nft']),
+        });
+      })
+    );
+    // console.log('args ', args);
+    let block = chain.mineBlock([Tx.contractCall('trustless-rewards', 'finish-result-many', [args], deployer.address)]);
+    // console.log('block ', block.receipts[0].events);
+    block.receipts[0].result.expectErr().expectUint(404);
   },
 });
 
